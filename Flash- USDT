@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo USDT Wallet</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#101820;color:white;
+  font-family:Arial,sans-serif;padding:20px;
+}
+.wallet{
+  max-width:430px;margin:30px auto;
+  background:#1b2935;padding:24px;
+  border-radius:20px;
+}
+.tag{color:#36d399;font-size:12px;font-weight:bold}
+.logo{font-size:25px;font-weight:bold;margin:20px 0}
+.balance{font-size:34px;font-weight:bold;margin:12px 0}
+.muted{color:#aab7c4;font-size:13px}
+button{
+  padding:13px;border:0;border-radius:10px;
+  background:#20b486;color:white;font-weight:bold;
+  width:100%;margin-top:10px;cursor:pointer;
+}
+input{
+  width:100%;padding:13px;margin-top:10px;
+  border:1px solid #52616d;border-radius:9px;
+  background:#101820;color:white;
+}
+.history{margin-top:25px;border-top:1px solid #52616d;padding-top:15px}
+.item{padding:12px 0;border-bottom:1px solid #344451}
+</style>
+</head>
+<body>
+<div class="wallet">
+  <div class="tag">● DEMO WALLET — NOT REAL CRYPTO</div>
+  <div class="logo">🟢 USDT Wallet</div>
+  <div class="muted">Demo Available Balance</div>
+  <div class="balance"><span id="balance">1000000</span> USDT</div>
+  <div class="muted">Fictional demo balance only</div>
+
+  <h3>Demo Send</h3>
+  <input id="receiver" placeholder="Demo receiver name">
+  <input id="amount" type="number" placeholder="Amount of demo USDT">
+  <button onclick="sendDemo()">Send Demo USDT</button>
+
+  <h3>Demo Receive</h3>
+  <button onclick="receiveDemo()">Receive 1000 Demo USDT</button>
+
+  <div class="history">
+    <h3>Demo Transaction History</h3>
+    <div id="history" class="muted">No transactions yet</div>
+  </div>
+</div>
+
+<script>
+let balance = 1000000;
+
+function update(){
+  document.getElementById("balance").textContent =
+    balance.toLocaleString("en-US");
+}
+
+function addHistory(message){
+  const item=document.createElement("div");
+  item.className="item";
+  item.textContent=message;
+  document.getElementById("history").prepend(item);
+}
+
+function sendDemo(){
+  const receiver=document.getElementById("receiver").value.trim();
+  const amount=Number(document.getElementById("amount").value);
+
+  if(!receiver || !Number.isFinite(amount) || amount<=0){
+    alert("Enter a demo receiver and valid amount");
+    return;
+  }
+  if(amount>balance){
+    alert("Insufficient demo balance");
+    return;
+  }
+
+  balance-=amount;
+  update();
+  addHistory("Demo sent "+amount.toLocaleString()+" USDT to "+receiver);
+  document.getElementById("amount").value="";
+  document.getElementById("receiver").value="";
+}
+
+function receiveDemo(){
+  balance+=1000;
+  update();
+  addHistory("Received 1,000 Demo USDT");
+}
+
+update();
+</script>
+</body>
+</html>
