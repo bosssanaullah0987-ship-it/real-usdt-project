@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Demo USDT Wallet</title>
+<title>Real USDT Wallet (TRC20)</title>
 <style>
 *{box-sizing:border-box}
 body{
@@ -15,88 +15,159 @@ body{
   background:#1b2935;padding:24px;
   border-radius:20px;
 }
-.tag{color:#36d399;font-size:12px;font-weight:bold}
-.logo{font-size:25px;font-weight:bold;margin:20px 0}
-.balance{font-size:34px;font-weight:bold;margin:12px 0}
+.tag{color:#36d399;font-size:12px;font-weight:bold;word-break:break-all}
+.logo{font-size:25px;font-weight:bold;margin:16px 0}
+.balance{font-size:32px;font-weight:bold;margin:10px 0}
 .muted{color:#aab7c4;font-size:13px}
 button{
   padding:13px;border:0;border-radius:10px;
   background:#20b486;color:white;font-weight:bold;
   width:100%;margin-top:10px;cursor:pointer;
 }
+button:disabled{opacity:0.6;cursor:not-allowed}
 input{
   width:100%;padding:13px;margin-top:10px;
   border:1px solid #52616d;border-radius:9px;
   background:#101820;color:white;
 }
 .history{margin-top:25px;border-top:1px solid #52616d;padding-top:15px}
-.item{padding:12px 0;border-bottom:1px solid #344451}
+.item{padding:12px 0;border-bottom:1px solid #344451;font-size:13px;word-break:break-all}
 </style>
 </head>
 <body>
 <div class="wallet">
-  <div class="tag">● DEMO WALLET — NOT REAL CRYPTO</div>
-  <div class="logo">🟢 USDT Wallet</div>
-  <div class="muted">Demo Available Balance</div>
-  <div class="balance"><span id="balance">1000000</span> USDT</div>
-  <div class="muted">Fictional demo balance only</div>
+  <div class="tag" id="status">● TRC20 WALLET DISCONNECTED</div>
+  <div class="logo">🟢 USDT TRC20 Wallet</div>
 
-  <h3>Demo Send</h3>
-  <input id="receiver" placeholder="Demo receiver name">
-  <input id="amount" type="number" placeholder="Amount of demo USDT">
-  <button onclick="sendDemo()">Send Demo USDT</button>
+  <button id="connectBtn" onclick="connectTron()">Connect Tron Wallet</button>
 
-  <h3>Demo Receive</h3>
-  <button onclick="receiveDemo()">Receive 1000 Demo USDT</button>
+  <div class="muted" style="margin-top:16px;">Real Available Balance</div>
+  <div class="balance"><span id="balance">0.00</span> USDT</div>
+  <div class="muted" id="accountAddr">Not connected</div>
+
+  <h3>Send Real TRC20 USDT</h3>
+  <input id="receiver" placeholder="Receiver TRON address (T...)">
+  <input id="amount" type="number" step="any" placeholder="Amount of USDT">
+  <button id="sendBtn" onclick="sendTRC20USDT()">Send Real USDT</button>
 
   <div class="history">
-    <h3>Demo Transaction History</h3>
+    <h3>Transaction History</h3>
     <div id="history" class="muted">No transactions yet</div>
   </div>
 </div>
 
 <script>
-let balance = 1000000;
+// TRON Mainnet USDT (TRC20) Contract Address
+const TRC20_USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const DECIMALS = 6;
 
-function update(){
-  document.getElementById("balance").textContent =
-    balance.toLocaleString("en-US");
+let tronWebObj = null;
+let userAddress = null;
+
+function addHistory(htmlContent){
+  const historyBox = document.getElementById("history");
+  if (historyBox.textContent === "No transactions yet") {
+    historyBox.textContent = "";
+  }
+  const item = document.createElement("div");
+  item.className = "item";
+  item.innerHTML = htmlContent;
+  historyBox.prepend(item);
 }
 
-function addHistory(message){
-  const item=document.createElement("div");
-  item.className="item";
-  item.textContent=message;
-  document.getElementById("history").prepend(item);
+function getTronWeb(){
+  if (window.tronWeb && window.tronWeb.ready) {
+    return window.tronWeb;
+  }
+  if (window.tronLink && window.tronLink.tronWeb && window.tronLink.tronWeb.ready) {
+    return window.tronLink.tronWeb;
+  }
+  return null;
 }
 
-function sendDemo(){
-  const receiver=document.getElementById("receiver").value.trim();
-  const amount=Number(document.getElementById("amount").value);
+async function connectTron(){
+  try {
+    if (window.tronLink && window.tronLink.request) {
+      await window.tronLink.request({ method: "tron_requestAccounts" });
+    }
 
-  if(!receiver || !Number.isFinite(amount) || amount<=0){
-    alert("Enter a demo receiver and valid amount");
+    // Wait briefly if provider initializes
+    for (let i = 0; i < 10; i++) {
+      tronWebObj = getTronWeb();
+      if (tronWebObj) break;
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    if (!tronWebObj || !tronWebObj.defaultAddress || !tronWebObj.defaultAddress.base58) {
+      alert("TronLink বা TRON সাপোর্টেড ওয়ালেট ব্রাউজারে ওপেন করে আনলক করো।");
+      return;
+    }
+
+    userAddress = tronWebObj.defaultAddress.base58;
+    document.getElementById("status").textContent = "● CONNECTED (TRON MAINNET TRC20)";
+    document.getElementById("accountAddr").textContent = `Address: ${userAddress}`;
+    await refreshTRC20Balance();
+  } catch (err) {
+    alert("কানেক্ট করা যায়নি: " + (err.message || err));
+  }
+}
+
+async function refreshTRC20Balance(){
+  if (!tronWebObj || !userAddress) return;
+  try {
+    const contract = await tronWebObj.contract().at(TRC20_USDT_CONTRACT);
+    const rawBal = await contract.balanceOf(userAddress).call();
+    const numBal = Number(rawBal.toString()) / Math.pow(10, DECIMALS);
+    document.getElementById("balance").textContent = numBal.toLocaleString("en-US", {
+      maximumFractionDigits: 4
+    });
+  } catch (err) {
+    console.error("TRC20 balance error:", err);
+  }
+}
+
+async function sendTRC20USDT(){
+  const sendBtn = document.getElementById("sendBtn");
+  const receiver = document.getElementById("receiver").value.trim();
+  const amountStr = document.getElementById("amount").value.trim();
+  const amountNum = Number(amountStr);
+
+  if (!tronWebObj || !userAddress) {
+    alert("আগে Connect Tron Wallet বাটনে ক্লিক করো।");
     return;
   }
-  if(amount>balance){
-    alert("Insufficient demo balance");
+  if (!tronWebObj.isAddress(receiver)) {
+    alert("সঠিক TRC20 (T...) ওয়ালেট অ্যাড্রেস দাও।");
+    return;
+  }
+  if (!amountStr || !Number.isFinite(amountNum) || amountNum <= 0) {
+    alert("সঠিক USDT পরিমাণ দাও।");
     return;
   }
 
-  balance-=amount;
-  update();
-  addHistory("Demo sent "+amount.toLocaleString()+" USDT to "+receiver);
-  document.getElementById("amount").value="";
-  document.getElementById("receiver").value="";
-}
+  try {
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Sending...";
 
-function receiveDemo(){
-  balance+=1000;
-  update();
-  addHistory("Received 1,000 Demo USDT");
-}
+    const contract = await tronWebObj.contract().at(TRC20_USDT_CONTRACT);
+    const rawAmount = Math.round(amountNum * Math.pow(10, DECIMALS));
 
-update();
+    const txId = await contract.transfer(receiver, rawAmount).send({
+      feeLimit: 100_000_000 // up to 100 TRX fee limit
+    });
+
+    addHistory(`Sent ${amountNum} USDT (TRC20) to <b>${receiver}</b><br>TxID: ${txId}`);
+    setTimeout(refreshTRC20Balance, 3000);
+
+    document.getElementById("receiver").value = "";
+    document.getElementById("amount").value = "";
+  } catch (err) {
+    alert("ট্রান্সফার ব্যর্থ হয়েছে: " + (err.message || err));
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send Real USDT";
+  }
+}
 </script>
 </body>
 </html>
